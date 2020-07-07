@@ -6,7 +6,7 @@ import org.springframework.jdbc.core.RowMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-/* Custom RowMapper class to eas the mapping of database table fields to Notification class type*/
+/* Custom RowMapper class to ease the mapping of database table fields to Notification class type*/
 public class NotificationRowMapper implements RowMapper<Notification> {
 
     @Override

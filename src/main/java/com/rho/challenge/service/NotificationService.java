@@ -28,7 +28,7 @@ public class NotificationService {
 
         System.out.println(bet);
 
-        // check if its this account first bet
+        // check if account has any bet registered
         if(!clients_manager.containsKey(bet.getAccountId())){
             System.out.println("Account ID: " + bet.getAccountId() +" added hashmap");
 
@@ -44,18 +44,17 @@ public class NotificationService {
             ArrayList<Object> client_bet_history = new ArrayList<>();
             client_bet_history.add(tmp);
             clients_manager.put(bet.getAccountId(),client_bet_history);
+
         }else{
-            /* check if the account bet cumulative in current_time - TIME_WINDOW
-             * plus the current bet exceeds the specified THRESHOLD and, if so,
-             * generate and publish a notification */
+            // check if the account bet cumulative in current_time - TIME_WINDOW
 
             //long window_start_sec = (System.currentTimeMillis()/1000) - ServiceParameters.TIME_WINDOW_SECONDS;
             long window_start_sec = bet.getTime() - ServiceParameters.TIME_WINDOW_MILLIS;
-            System.out.println(window_start_sec);
+            // System.out.println(window_start_sec);
             //long window_end = bet.getTime()/1000;
 
-            /* iterates through the account bet history, removing bets no longer required for future events,
-            that is, bets older than TIME_WINDOW_SECONDS while calculating the cumulative bet amount generated
+            /* iterates through the account bet history, removing bets no longer required to be processed,
+            that is, bets older than TIME_WINDOW_SECONDS, while calculating the cumulative bet amount generated
             in that time span */
             double bet_total_time_window = processAccountBets(bet.getAccountId(), window_start_sec);
 
@@ -63,7 +62,10 @@ public class NotificationService {
 
             double cumulative = bet_total_time_window + bet.getStake();
 
+            /* plus check if the current bet exceeds the specified THRESHOLD and, if so,
+            * generate and publish a notification */
             if(cumulative >= ServiceParameters.THRESHOLD) {
+
                 System.out.println(bet + " discarded. Maximum threshold " + ServiceParameters.THRESHOLD + " exceeded!");
 
                 return createNotification(bet.getAccountId(), cumulative);
@@ -123,6 +125,7 @@ public class NotificationService {
 
     }
 
+    /* create notification, which will be then stored to the local db */
     public Notification createNotification(int account_id, double cumulative){
 
         Notification n = new Notification(account_id, cumulative);

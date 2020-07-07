@@ -26,24 +26,19 @@ public class NotificationController {
     @MessageMapping("/process_bet")
     @SendTo("/topic/notifications")
     public String processBet(@Payload @NonNull String message){
-        /* Need additional parsing steps since the Gson method for direct class instantiation
-        from the JSON string does not instantiate the class, resulting in a null time field and
-        making it unable to throw the specified exceptions
-        Example: Notification { "account_id": 1, "stake": 40, time=null }
-        Gson : Bet b = gson.fromJson(message,Bet.class);
-         */
-        JsonObject json;
+
+        JsonObject json_message;
         try{
-            json = new JsonParser().parse(message).getAsJsonObject();
+            json_message = new JsonParser().parse(message).getAsJsonObject();
         }catch (JsonSyntaxException e){
             return "Invalid JSON format";
         }
 
         Bet b;
+
         try{
-            //Bet b = g.fromJson(message, Bet.class);
-            int account_id = json.get("account_id").getAsInt();
-            double stake = json.get("stake").getAsDouble();
+            int account_id = json_message.get("account_id").getAsInt();
+            double stake = json_message.get("stake").getAsDouble();
             b = new Bet(account_id, stake);
             System.out.println(b);
         }catch (NumberFormatException e) {
@@ -67,9 +62,8 @@ public class NotificationController {
             }
         }
         return "Error while processing bet";
-        //return "OK";
-    }
 
+    }
 
     /*
     @MessageExceptionHandler

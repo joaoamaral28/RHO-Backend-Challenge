@@ -62,7 +62,7 @@ public class Notification {
         return "Notification { account_id: "+ this.account_id + ", cumulative: " + this.cumulative +  ", timestamp:" + this.time + " }";
     }
 
-    /* must override equals method in order to adapt to the edge case where notifications timestamps
+    /* must override equals method in order to adapt to the edge case where equal notifications timestamps
     * in testing differed from one another by less than a millisecond and would result a false equivalence
     * Example: Notification { account_id: 1, cumulative: 120.0, timestamp:2020-07-06 00:51:38.3539101 }
     *          Notification { account_id: 1, cumulative: 120.0, timestamp:2020-07-06 00:51:38.338439 }
