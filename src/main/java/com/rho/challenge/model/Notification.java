@@ -1,5 +1,7 @@
 package com.rho.challenge.model;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
 import com.rho.challenge.service.ServiceParameters;
 
@@ -55,6 +57,16 @@ public class Notification {
         json.addProperty("cumulative", this.cumulative);
         //json.addProperty("time", this.time.toString());
         return json.toString();
+    }
+
+    public String serialize(){
+        ObjectMapper object_mapper = new ObjectMapper();
+        try {
+            return object_mapper.writeValueAsString(this);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     @Override

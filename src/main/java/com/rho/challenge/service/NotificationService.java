@@ -1,5 +1,8 @@
 package com.rho.challenge.service;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import com.rho.challenge.dao.NotificationDAO;
 import com.rho.challenge.model.Bet;
 import com.rho.challenge.model.Notification;
@@ -22,6 +25,48 @@ public class NotificationService {
     @Autowired
     public NotificationService(@Qualifier("testdb") NotificationDAO notification_dao ){
         this.notification_dao = notification_dao;
+    }
+
+    public String processMessage(String message){
+
+        JsonObject json_message;
+
+        try{
+            json_message = new JsonParser().parse(message).getAsJsonObject();
+        }catch (JsonSyntaxException e){
+            return "Invalid JSON format";
+        }
+
+        Bet b;
+
+        try{
+            int account_id = json_message.get("account_id").getAsInt();
+            double stake = json_message.get("stake").getAsDouble();
+            b = new Bet(account_id, stake);
+            System.out.println(b);
+        }catch (NumberFormatException e) {
+            return "Bet ID and Stake amount must be digits";
+        }catch (IllegalArgumentException e){
+            return e.getMessage();
+        }
+
+        Object ret = processBet(b);
+
+        System.out.println(ret);
+
+        if(ret instanceof String){
+            return (String) ret;
+        }else if(ret instanceof Notification){
+            try{
+                return ((Notification) ret).toJSONString();
+            }catch (Exception e){
+                System.out.println("Failed to publish notification: " + ret);
+                return "Error while publishing notification \n" + e;
+            }
+        }
+
+        return "Error while processing bet";
+
     }
 
     public Object processBet(Bet bet){
