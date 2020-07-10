@@ -1,6 +1,7 @@
 package com.rho.challenge.controller;
 
 import com.rho.challenge.ChallengeApplication;
+import com.rho.challenge.model.ErrorMessage;
 import com.rho.challenge.model.Notification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,24 +44,25 @@ class NotificationControllerTest {
         }
     }
 
-    private int port = 8080;
+    /*
+    The client subscribes on topic "/topic/notifications" to receive notifications
+    The client sends messages through the topic "/monitor/process_bet"
+    */
 
-    private String WS_URI = "ws://localhost:" + port;
+    private final int port = 8080;
 
-    private String WS_TOPIC_MAIN = "/gs-guide-websocket";
+    private final String WS_URI = "ws://localhost:" + port;
 
-    private String WS_TOPIC_SUB_MAIN = "/topic";
-    private String WS_TOPIC_SUB_BET = "/notifications";
-    private String WS_TOPIC_SND_MAIN = "/monitor";
-    private String WS_TOPIC_SND_BET = "/process_bet";
+    private final String WS_TOPIC_MAIN = "/gs-guide-websocket";
+
+    private final String WS_TOPIC_SUB_MAIN = "/topic";
+    private final String WS_TOPIC_SUB_BET = "/notifications";
+    private final String WS_TOPIC_SND_MAIN = "/monitor";
+    private final String WS_TOPIC_SND_BET = "/process_bet";
 
     BlockingQueue<String> blockingQueue;
     WebSocketStompClient stompClient;
 
-    /*
-    stompClient.subscribe('/topic/notifications',
-    stompClient.send("/monitor/process_bet"
-     */
 
     @BeforeEach
     public void setup(){
@@ -75,7 +77,7 @@ class NotificationControllerTest {
                 .get(1, TimeUnit.SECONDS);
         session.subscribe(WS_TOPIC_SUB_MAIN + WS_TOPIC_SUB_BET, new DefaultStompFrameHandler());
 
-        String s_bet = "{\"account_id\":\"1\",\"stake\":\"10\"}";
+        String s_bet = "{\"accountId\":\"1\",\"stake\":\"10\"}";
         session.send(WS_TOPIC_SND_MAIN + WS_TOPIC_SND_BET, s_bet.getBytes());
 
         assertEquals("OK", blockingQueue.poll(1, TimeUnit.SECONDS));
@@ -88,7 +90,7 @@ class NotificationControllerTest {
                 .get(1, TimeUnit.SECONDS);
         session.subscribe(WS_TOPIC_SUB_MAIN + WS_TOPIC_SUB_BET, new DefaultStompFrameHandler());
 
-        String s_bet = "{\"account_id\":\"1\",\"stake\":\"100\"}";
+        String s_bet = "{\"accountId\":\"1\",\"stake\":\"100\"}";
         session.send(WS_TOPIC_SND_MAIN + WS_TOPIC_SND_BET, s_bet.getBytes());
 
         Notification n_expect = new Notification(1,100.0);
@@ -105,14 +107,16 @@ class NotificationControllerTest {
                 .get(1, TimeUnit.SECONDS);
         session.subscribe(WS_TOPIC_SUB_MAIN + WS_TOPIC_SUB_BET, new DefaultStompFrameHandler());
 
-        String s_bet = "{\"account_id\":\"1\",\"stake\":}";
-        String s_bet1 = "{\"account_id\":\"1\" \"stake\":\"2\"}";
+        String s_bet = "{\"accountId\":\"1\",\"stake\":}";
+        String s_bet1 = "{\"accountId\":\"1\" \"stake\":\"2\"}";
+
+        String errorMessage = "{\"message\":\"Invalid JSON request\"}";
 
         session.send(WS_TOPIC_SND_MAIN + WS_TOPIC_SND_BET, s_bet.getBytes());
-        assertEquals("Invalid JSON format", blockingQueue.poll(1, TimeUnit.SECONDS));
+        assertEquals(errorMessage, blockingQueue.poll(1, TimeUnit.SECONDS));
 
         session.send(WS_TOPIC_SND_MAIN + WS_TOPIC_SND_BET, s_bet1.getBytes());
-        assertEquals("Invalid JSON format", blockingQueue.poll(1, TimeUnit.SECONDS));
+        assertEquals(errorMessage,blockingQueue.poll(1, TimeUnit.SECONDS));
     }
 
     @Test
@@ -122,27 +126,27 @@ class NotificationControllerTest {
                 .get(1, TimeUnit.SECONDS);
         session.subscribe(WS_TOPIC_SUB_MAIN + WS_TOPIC_SUB_BET, new DefaultStompFrameHandler());
 
-        String s_bet = "{\"account_id\":\"1\",\"stake\":\"abc\"}";
+
+        String s_bet = "{\"accountId\":\"1\",\"stake\":\"abc\"}";
         session.send(WS_TOPIC_SND_MAIN + WS_TOPIC_SND_BET, s_bet.getBytes());
-        assertEquals("Bet ID and Stake amount must be digits", blockingQueue.poll(1, TimeUnit.SECONDS));
+        assertEquals("{\"message\":\"Invalid JSON request\"}", blockingQueue.poll(1, TimeUnit.SECONDS));
 
         String s_bet1 = "{\"account_id\":\"@@\", \"stake\":\"2\"}";
         session.send(WS_TOPIC_SND_MAIN + WS_TOPIC_SND_BET, s_bet1.getBytes());
-        assertEquals("Bet ID and Stake amount must be digits", blockingQueue.poll(1, TimeUnit.SECONDS));
+        assertEquals("{\"message\":\"Invalid JSON request\"}", blockingQueue.poll(1, TimeUnit.SECONDS));
 
     }
 
     @Test
-    void testProcessBetNullMessage() throws InterruptedException, ExecutionException, TimeoutException{
+    void testProcessBetNullPayloadMessage() throws InterruptedException, ExecutionException, TimeoutException{
 
         StompSession session = stompClient.connect(WS_URI+WS_TOPIC_MAIN, new StompSessionHandlerAdapter() {})
                 .get(1, TimeUnit.SECONDS);
         session.subscribe(WS_TOPIC_SUB_MAIN + WS_TOPIC_SUB_BET, new DefaultStompFrameHandler());
 
-        String s_bet = "{\"account_id\":\"1\",\"stake\":\"abc\"}";
         session.send(WS_TOPIC_SND_MAIN + WS_TOPIC_SND_BET, null);
 
-        // assertEquals("Bet ID and Stake amount must be digits", blockingQueue.poll(1, TimeUnit.SECONDS));
+        assertEquals("{\"message\":\"Invalid JSON request\"}", blockingQueue.poll(1, TimeUnit.SECONDS));
 
     }
 

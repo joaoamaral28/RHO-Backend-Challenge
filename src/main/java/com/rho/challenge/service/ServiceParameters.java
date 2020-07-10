@@ -1,5 +1,8 @@
 package com.rho.challenge.service;
 
+/**
+ * The business logic configurable parameters
+ */
 public class ServiceParameters {
 
     public static final int THRESHOLD = 100; // Maximum combined bet threshold an account can produce in TIME_SECOND_WINDOWS

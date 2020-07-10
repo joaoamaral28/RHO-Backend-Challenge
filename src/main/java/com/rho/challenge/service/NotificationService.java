@@ -1,95 +1,69 @@
 package com.rho.challenge.service;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
-import com.rho.challenge.dao.NotificationDAO;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rho.challenge.exception.CustomException;
+import com.rho.challenge.exception.EntityType;
+import com.rho.challenge.exception.ExceptionType;
+import com.rho.challenge.model.UserData;
+import com.rho.challenge.repository.NotificationRepository;
 import com.rho.challenge.model.Bet;
 import com.rho.challenge.model.Notification;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+/**
+ * NotificationService Class defines the business logic of the server, where it receives
+ * players bets, stores them and analyzes their history based on the maximum threshold amount
+ * they can bet during a specified bet processing window.
+ */
 @Service
 public class NotificationService {
 
-    private NotificationDAO notification_dao;
-
-    private Map<Integer, ArrayList<Object>> clients_manager = new HashMap<>();
-
     @Autowired
-    public NotificationService(@Qualifier("testdb") NotificationDAO notification_dao ){
-        this.notification_dao = notification_dao;
-    }
+    private NotificationRepository repository;
 
-    public String processMessage(String message){
+    private Map<Integer, ArrayList<UserData>> clientsManager = new HashMap<>();
 
-        JsonObject json_message;
+    public String processMessage(String message) throws CustomException, JsonProcessingException {
 
-        try{
-            json_message = new JsonParser().parse(message).getAsJsonObject();
-        }catch (JsonSyntaxException e){
-            return "Invalid JSON format";
-        }
+        ObjectMapper mapper = new ObjectMapper();
+        Bet bet = mapper.readValue(message, Bet.class);
 
-        Bet b;
+        String response = processBet(bet);
 
-        try{
-            int account_id = json_message.get("account_id").getAsInt();
-            double stake = json_message.get("stake").getAsDouble();
-            b = new Bet(account_id, stake);
-            System.out.println(b);
-        }catch (NumberFormatException e) {
-            return "Bet ID and Stake amount must be digits";
-        }catch (IllegalArgumentException e){
-            return e.getMessage();
-        }
+        System.out.println(response);
 
-        Object ret = processBet(b);
-
-        System.out.println(ret);
-
-        if(ret instanceof String){
-            return (String) ret;
-        }else if(ret instanceof Notification){
-            try{
-                return ((Notification) ret).toJSONString();
-            }catch (Exception e){
-                System.out.println("Failed to publish notification: " + ret);
-                return "Error while publishing notification \n" + e;
-            }
-        }
-
-        return "Error while processing bet";
+        return response;
 
     }
 
-    public Object processBet(Bet bet){
+    public String processBet(Bet bet) throws CustomException{
 
         System.out.println(bet);
 
         // check if account has any bet registered
-        if(!clients_manager.containsKey(bet.getAccountId())){
+        if(!clientsManager.containsKey(bet.getAccountId())){
             System.out.println("Account ID: " + bet.getAccountId() +" added hashmap");
 
             /* if current bet stake exceeds the specified threshold amount it cannot be accepted
             and a notification is created */
             if(bet.getStake() >= ServiceParameters.THRESHOLD){
                 System.out.println(bet + " discarded. Maximum threshold " + ServiceParameters.THRESHOLD + " exceeded!");
-                return createNotification(bet.getAccountId(), bet.getStake());
+                return createNotification(bet.getAccountId(), bet.getStake()).toJSONString();
             }
 
-            // client bet history data stored as : ID => [ { stake, time }, { stake, time } ... ]
-            Object tmp[] = { bet.getStake(), bet.getTime()};
-            ArrayList<Object> client_bet_history = new ArrayList<>();
-            client_bet_history.add(tmp);
-            clients_manager.put(bet.getAccountId(),client_bet_history);
-
+            // client bet history data stored as : userId => [ { stake, time }, { stake, time } ... ]
+            UserData userData = new UserData(bet.getStake(), bet.getTime());
+            ArrayList<UserData> client_bet_history = new ArrayList<>();
+            client_bet_history.add(userData);
+            clientsManager.put(bet.getAccountId(),client_bet_history);
         }else{
             // check if the account bet cumulative in current_time - TIME_WINDOW
 
@@ -113,31 +87,20 @@ public class NotificationService {
 
                 System.out.println(bet + " discarded. Maximum threshold " + ServiceParameters.THRESHOLD + " exceeded!");
 
-                return createNotification(bet.getAccountId(), cumulative);
-
-                /* Test if notification was correctly stored
-                Notification n1 = notification_dao.getNotification(bet.getAccountId());
-                if(n1 != null){
-                    System.out.println("Notification retrieved successfully from database");
-                }else{
-                    System.out.print("Failed to retrieve notification from database");
-                }
-                System.out.println(n1);
-                */
+                return createNotification(bet.getAccountId(), cumulative).toJSONString();
 
             }
 
-            /* in case the stake does not exceed it is added to the account betting history */
-
-            Object tmp[] = { bet.getStake(), bet.getTime() };
-            ArrayList<Object> client_bet_history = clients_manager.get(bet.getAccountId());
-            client_bet_history.add(tmp);
-            clients_manager.replace(bet.getAccountId(), client_bet_history);
-
+            /* in case the stake does not exceed the threshold it is added to the account betting history */
+            UserData userData = new UserData(bet.getStake(), bet.getTime());
+            ArrayList<UserData> client_bet_history = clientsManager.get(bet.getAccountId());
+            client_bet_history.add(userData);
+            clientsManager.replace(bet.getAccountId(), client_bet_history);
             System.out.println("Updated account " + bet.getAccountId() + " bet history");
         }
 
         return "OK";
+
     }
 
     /*
@@ -145,47 +108,47 @@ public class NotificationService {
     processing window span ( that is bets outside the range [current_time-60, current_time]) while
     calculating the cumulative amount of the bets inside the window span
      */
-    public double processAccountBets(int account_id, long window_start){
+    public double processAccountBets(int accountId, long windowStart){
 
-        double stakes_cumulative = 0.0;
-        ArrayList<Object> player_bets = clients_manager.get(account_id);
+        double stakesCumulative = 0.0;
+        ArrayList<UserData> player_bets = clientsManager.get(accountId);
 
-        for(Iterator<Object> iterator = player_bets.iterator(); iterator.hasNext();){
-            Object[] current_bet = (Object[]) iterator.next();
+        /* need to use an Iterator in order to dynamically iterate through the array and remove old bets */
+        for(Iterator<UserData> iterator = player_bets.iterator(); iterator.hasNext();){
 
-            //System.out.println( (double) current_bet[0] );
-            //System.out.println( (long) current_bet[1] );
+            UserData currentData = iterator.next();
+            double currentBet = currentData.getStake();
+            long time = currentData.getTime();
 
             // check if old bet
-            if( (long) current_bet[1] <= window_start){
-                System.out.println("Account " + account_id + " Bet " + (long) current_bet[1] + " removed!");
+            if( time <= windowStart){
+                System.out.println("Account " + accountId + " Bet registered at " + new Timestamp(time) + " removed!");
                 iterator.remove();
             }else{
-                stakes_cumulative += (double) current_bet[0];
+                stakesCumulative += (double) currentBet;
             }
 
         }
 
-        return stakes_cumulative;
+        return stakesCumulative;
 
     }
 
     /* create notification, which will be then stored to the local db */
-    public Notification createNotification(int account_id, double cumulative){
+    public Notification createNotification(int accountId, double cumulative) throws CustomException {
 
-        Notification n = new Notification(account_id, cumulative);
+        Notification n = new Notification(accountId, cumulative);
 
         System.out.println(n);
 
-        int ret = notification_dao.storeNotification(n);
-        if(ret == 1){
+        try {
+            Notification ret = repository.save(n);
             System.out.println("Notification stored successfully");
-        }else{
-            System.out.print("Failed to store notification");
-            return null;
+            return ret;
+        }catch (Exception ex){
+            System.out.print("Error: Store notification failed. Cause: " + ex.getLocalizedMessage());
+            throw CustomException.throwException(EntityType.REPOSITORY, ExceptionType.STORAGE_FAILED_EXCEPTION, ex.getLocalizedMessage());
         }
-
-        return n;
 
     }
 

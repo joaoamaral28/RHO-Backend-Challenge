@@ -34,7 +34,7 @@ function disconnect() {
 }
 
 function sendBet() {
-    stompClient.send("/monitor/process_bet", {}, JSON.stringify({'account_id': $("#account_id").val(), 'stake': $("#stake").val()}));
+    stompClient.send("/monitor/process_bet", {}, JSON.stringify({'accountId': $("#accountId").val(), 'stake': $("#stake").val()}));
 }
 
 function showNotifications(message) {

@@ -1,6 +1,8 @@
 package com.rho.challenge.service;
 
-import com.rho.challenge.dao.NotificationDAO;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.rho.challenge.exception.CustomException;
+import com.rho.challenge.repository.NotificationRepository;
 import com.rho.challenge.model.Bet;
 import com.rho.challenge.model.Notification;
 import org.junit.jupiter.api.Test;
@@ -19,17 +21,99 @@ class NotificationServiceUnitTest {
     private NotificationService notification_service;
 
     @Mock
-    private NotificationDAO notification_dao;
+    private NotificationRepository notification_dao;
 
     @Test
-    void testProcessBetValid(){
+    void testProcessMessageOK(){
+
+        String msg = "{\"accountId\":\"1\",\"stake\":\"10\"}";
+        String msg1 = "{\"accountId\":1,\"stake\":20}";
+
+        String response = "";
+        String response1 = "";
+
+        try {
+            response = notification_service.processMessage(msg);
+            response1 = notification_service.processMessage(msg1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        assertEquals("OK", response);
+        assertEquals("OK", response1);
+    }
+
+    @Test
+    void testProcessMessageMultipleAccountValidMessages(){
+        String msg = "{\"accountId\":\"1\",\"stake\":\"10\"}";
+        String msg1 = "{\"accountId\":2,\"stake\":20}";
+        String msg2 = "{\"accountId\":\"3\",\"stake\":\"89.5\"}";
+        String msg3 = "{\"accountId\":4,\"stake\":55.55}";
+
+        String response = "";
+        String response1 = "";
+        String response2 = "";
+        String response3 = "";
+
+        try {
+            response = notification_service.processMessage(msg);
+            response1 = notification_service.processMessage(msg1);
+            response2 = notification_service.processMessage(msg2);
+            response3 = notification_service.processMessage(msg3);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        assertEquals("OK", response);
+        assertEquals("OK", response1);
+        assertEquals("OK", response2);
+        assertEquals("OK", response3);
+
+    }
+
+    @Test
+    void testProcessMessageInvalidField(){
+
+        String msg = "{\"account_id\":\"1\",\"stake\":\"10\"}";
+        String msg1 = "{\"accountId\":\"1\",\"stake\":}";
+        String msg2 = "";
+
+        Exception ex1 = assertThrows(JsonProcessingException.class, () -> {
+            notification_service.processMessage(msg);
+        });
+        Exception ex2 = assertThrows(JsonProcessingException.class, () -> {
+            notification_service.processMessage(msg1);
+        });
+        Exception ex3 = assertThrows(JsonProcessingException.class, () -> {
+            notification_service.processMessage(msg2);
+        });
+
+    }
+
+    @Test
+    void testProcessMessageReturnNotification() throws CustomException, JsonProcessingException {
+        String msg = "{\"accountId\":\"1\",\"stake\":\"10\"}";
+        String msg1 = "{\"accountId\":\"1\",\"stake\": 99}";
+
+        Notification n = new Notification(1,109.0);
+
+        String ack = notification_service.processMessage(msg);
+        Mockito.when(notification_dao.save(n)).thenReturn(n);
+        String strNotification = notification_service.processMessage(msg1);
+
+        assertEquals("OK", ack);
+        assertEquals(n.toJSONString(), strNotification);
+    }
+
+    @Test
+    void testProcessBetValid() throws CustomException {
         Bet b = new Bet(1, 50);
-        String response = (String) notification_service.processBet(b);
+        String response = notification_service.processBet(b);
         assertEquals("OK", response);
     }
 
     @Test
-    void testProcessBetMultipleAccountValid(){
+    void testProcessBetMultipleAccountValid() throws CustomException {
         Bet b1 = new Bet(1,10);
         Bet b2 = new Bet(2,20);
 
@@ -40,7 +124,7 @@ class NotificationServiceUnitTest {
     }
 
     @Test
-    void testProcessBetMultipleValid(){
+    void testProcessBetMultipleValid() throws CustomException {
         Bet b1 = new Bet(1, 10);
         Bet b2 = new Bet(1, 20.2);
         Bet b3 = new Bet(1, 30);
@@ -58,7 +142,7 @@ class NotificationServiceUnitTest {
 
 
     @Test
-    void testProcessBetNotificationGenerated(){
+    void testProcessBetNotificationGenerated() throws CustomException {
         Bet b1 = new Bet(1, 30);
         Bet b2 = new Bet(1, 40);
         Bet b3 = new Bet(1, 50);
@@ -70,15 +154,15 @@ class NotificationServiceUnitTest {
 
         Notification n_expected = new Notification(1,120.0);
 
-        Mockito.when(notification_dao.storeNotification(n_expected)).thenReturn(1);
-        Notification n = (Notification) notification_service.processBet(b3);
-        assertEquals(n_expected, n);
-        // Mockito.verify(notification_dao, Mockito.times(1)).storeNotification((n_expected));
+        Mockito.when(notification_dao.save(n_expected)).thenReturn(n_expected);
+        String strNotification = notification_service.processBet(b3);
+        assertEquals(n_expected.toJSONString(), strNotification);
+
     }
 
 
     @Test
-    void testProcessBetNotificationGeneratedMultipleAccount(){
+    void testProcessBetNotificationGeneratedMultipleAccount() throws CustomException {
         Bet b1 = new Bet(1, 30);
         Bet b2 = new Bet(1, 40);
         Bet b3 = new Bet(1, 50);
@@ -98,19 +182,19 @@ class NotificationServiceUnitTest {
         Notification n_expected1 = new Notification(1,120.0);
         Notification n_expected2 = new Notification(2,120.0);
 
-        Mockito.when(notification_dao.storeNotification(n_expected1)).thenReturn(1);
-        Notification n1 = (Notification) notification_service.processBet(b3);
-        assertEquals(n_expected1, n1);
+        Mockito.when(notification_dao.save(n_expected1)).thenReturn(n_expected1);
+        String strNotification1 = notification_service.processBet(b3);
+        assertEquals(n_expected1.toJSONString(), strNotification1);
 
-        Mockito.when(notification_dao.storeNotification(n_expected2)).thenReturn(1);
-        Notification n2 = (Notification) notification_service.processBet(b6);
+        Mockito.when(notification_dao.save(n_expected2)).thenReturn(n_expected2);
+        String strNotification2 = notification_service.processBet(b6);
 
-        assertEquals(n_expected2, n2);
+        assertEquals(n_expected2.toJSONString(), strNotification2);
 
     }
 
     @Test
-    void testProcessBetMultipleValidWithTimeDisplacement(){
+    void testProcessBetMultipleValidWithTimeDisplacement() throws CustomException {
 
         long time1 = 1593766800000L; // 2020-07-03 10:00:00
         long time2 = 1593766830000L; // 2020-07-03 10:00:30
@@ -134,7 +218,7 @@ class NotificationServiceUnitTest {
     }
 
     @Test
-    void testProcessBetMultipleValidWithTimeDisplacementAndNotification(){
+    void testProcessBetMultipleValidWithTimeDisplacementAndNotification() throws CustomException {
         long time1 = 1593766800000L; // 2020-07-03 10:00:00
         long time2 = 1593766830000L; // 2020-07-03 10:00:30
         long time3 = 1593766850000L; // 2020-07-03 10:00:50
@@ -158,23 +242,19 @@ class NotificationServiceUnitTest {
 
         Notification n_expected = new Notification(1,110.0);
 
-        Mockito.when(notification_dao.storeNotification(n_expected)).thenReturn(1);
-        Notification response5 = (Notification) notification_service.processBet(b5);
+        Mockito.when(notification_dao.save(n_expected)).thenReturn(n_expected);
+        String strNotification = notification_service.processBet(b5);
 
-        assertEquals(n_expected, response5);
+        assertEquals(n_expected.toJSONString(), strNotification);
 
     }
 
-
-
     @Test
-    void testCreateNotification() {
+    void testCreateNotification() throws CustomException {
         int account_id = 1;
         double cumulative = 120.0;
         Notification n_expected = new Notification(account_id, cumulative);
-
-        Mockito.when(notification_dao.storeNotification(n_expected)).thenReturn(1);
-
+        Mockito.when(notification_dao.save(n_expected)).thenReturn(n_expected);
         Notification n = notification_service.createNotification(account_id, cumulative);
         assertNotNull(n);
         assertEquals(n_expected, n);

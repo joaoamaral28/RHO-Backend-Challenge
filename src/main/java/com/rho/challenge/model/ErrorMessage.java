@@ -1,22 +1,29 @@
 package com.rho.challenge.model;
 
-import java.util.List;
-
-/* Class representing the verbose errors generated due to an exception at the controller level */
+/**
+ * Class representing the verbose error message generated form an exception
+ */
 public class ErrorMessage {
 
-    private List<String> errors;
+    /**
+     * Verbose message representing the occurred internal error
+     */
+    private String message;
 
-    public ErrorMessage(List<String> errors) {
-        this.errors = errors;
+    /**
+     * Creates a new ErrorMessage with the given error message String
+     * @param message String representing the error
+     */
+    public ErrorMessage(String message){
+        this.message = message;
     }
 
-    public List<String> getErrors() {
-        return errors;
-    }
-
-    public void setErrors(List<String> errors) {
-        this.errors = errors;
+    /**
+     * Retrieves the error message
+     * @return the error message String
+     */
+    public String getMessage() {
+        return message;
     }
 
 }

@@ -1,5 +1,7 @@
 package com.rho.challenge.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.rho.challenge.exception.CustomException;
 import com.rho.challenge.model.Bet;
 import com.rho.challenge.model.Notification;
 import com.rho.challenge.service.NotificationService;
@@ -28,70 +30,55 @@ class NotificationControllerUnitTest {
 
     @Mock
     private NotificationService notification_service;
-    /*
+
     @Test
-    void testProcessBetReturnsOK() {
+    void testProcessBetReturnsOK() throws CustomException, JsonProcessingException {
 
         String s_bet = "{\"account_id\":\"1\",\"stake\":\"10\"}";
         String s_bet1 = "{\"account_id\":1,\"stake\":20}";
 
-        Bet b1 = new Bet(1,10);
-        Bet b2 = new Bet(1,20);
-
-        Mockito.when(notification_service.processBet(b1)).thenReturn("OK");
+        Mockito.when(notification_service.processMessage(s_bet)).thenReturn("OK");
         String response = notification_controller.processBet(s_bet);
-        Mockito.when(notification_service.processBet(b2)).thenReturn("OK");
-        String response1 = notification_controller.processBet(s_bet1);
 
         assertEquals("OK", response);
+
+        Mockito.when(notification_service.processMessage(s_bet1)).thenReturn("OK");
+        String response1 = notification_controller.processBet(s_bet1);
         assertEquals("OK", response1);
 
     }
 
     @Test
-    void testProcessBetReturnsNotification(){
+    void testProcessBetReturnsNotification() throws CustomException, JsonProcessingException {
+
         String s_bet = "{\"account_id\":\"1\",\"stake\":\"100\"}";
-        Bet b1 = new Bet(1,100);
+
         Notification n_expect = new Notification(1,100.0);
-        Mockito.when(notification_service.processBet(b1)).thenReturn(n_expect);
+
+        Mockito.when(notification_service.processMessage(s_bet)).thenReturn(n_expect.toJSONString());
+
         String response = notification_controller.processBet(s_bet);
         String s_expect = n_expect.toJSONString();
         assertNotNull(n_expect);
         assertEquals(s_expect, response);
     }
 
+
     @Test
-    void testProcessBetBadMessageFormat(){
+    void testProcessBetBadMessageFormat() throws CustomException, JsonProcessingException {
         String s_bet = "{\"account_id\":\"1\",\"stake\":}";
-        String s_bet1 = "{\"account_id\":\"1\" \"stake\":\"2\"}";
+        String s_bet1 = "{\"accountId\":\"1\" \"stake\":\"2\"}";
 
-        //Mockito.when(notification_service.processBet(b1)).thenReturn("OK");
+        String errorMessage = "{\"message\":\"Invalid JSON request\"}";
+
+        Mockito.when(notification_service.processMessage(s_bet)).thenReturn(errorMessage);
         String response = notification_controller.processBet(s_bet);
-        //Mockito.when(notification_service.processBet(b2)).thenReturn("OK");
-        String response1 = notification_controller.processBet(s_bet1);
+        assertEquals(errorMessage, response);
 
-        assertNotNull(response);
-        assertEquals("Invalid JSON format", response);
-        assertNotNull(response1);
-        assertEquals("Invalid JSON format", response1);
+        Mockito.when(notification_service.processMessage(s_bet1)).thenReturn(errorMessage);
+        String response1 = notification_controller.processBet(s_bet1);
+        assertEquals(errorMessage, response1);
 
     }
-
-    @Test
-    void testProcessBetBadMessageElement(){
-
-        String s_bet = "{\"account_id\":\"1\",\"stake\":\"abc\"}";
-        String s_bet1 = "{\"account_id\":\"@@\", \"stake\":\"2\"}";
-        String response = notification_controller.processBet(s_bet);
-        String response1 = notification_controller.processBet(s_bet1);
-
-        assertNotNull(response);
-        assertEquals("Bet ID and Stake amount must be digits", response);
-        assertNotNull(response1);
-        assertEquals("Bet ID and Stake amount must be digits", response1);
-
-
-    }
-    */
 
 }
