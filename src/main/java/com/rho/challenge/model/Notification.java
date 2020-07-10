@@ -61,6 +61,11 @@ public class Notification {
         this.time = time;
     }
 
+    /* default constructor */
+    public Notification(){
+
+    }
+
     /**
      * Returns the user ID of the account
      * @return ID of the user

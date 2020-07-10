@@ -7,6 +7,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ class NotificationRepositoryTest {
     @Test
     @Transactional
     @Rollback(true)
+    @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
     public void testSaveNotification(){
         Notification n = new Notification(1,120.5);
         Notification ret = notification_dao.save(n);
@@ -33,6 +35,7 @@ class NotificationRepositoryTest {
     @Test
     @Transactional
     @Rollback(true)
+    @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
     public void testNotificationStoredCorrectly(){
         Notification n = new Notification(1,120.0);
         Notification ret = notification_dao.save(n);
@@ -42,7 +45,8 @@ class NotificationRepositoryTest {
         Iterable<Notification> iter =  notification_dao.findAll();
 
         for (Notification notification : iter) {
-            assertEquals(notification, n);
+            assertEquals(notification.getAccountId(), n.getAccountId());
+            assertEquals(notification.getCumulative(), n.getCumulative());
         }
 
     }
