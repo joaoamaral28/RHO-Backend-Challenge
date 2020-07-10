@@ -9,7 +9,7 @@ If a player goes over the threshold in the interval X, a notification should be
 generated. That is, for each new stake the player creates (at instant t), the system must check if in t -
 time_window there were stakes that, in total, go over the threshold (see image).
 
-Source messages use the following format: { account: 123, stake:4 } 
+Source messages use the following format: { account: 123, stake: 4 } 
 
 ### Instructions
 
@@ -55,25 +55,25 @@ All of the application modules were also extensively tested via unit and integra
 
 ## Deployment (local)
 
-> Clone the repository to your local machine 
+Clone the repository to your local machine 
 
 ```shell
 $ git clone https://github.com/joaoamaral28/RHO-Backend-Challenge.git
 ```
-> Build the application manually or use your favorite IDE
+Build the application manually or using your favorite IDE
 
 ```shell
 $ cd RHO-Backend-Challenge
 $ mvn clean install
 ```
 
-> Build the Docker image
+Build the Docker image
 
 ```shell
 $ docker build -f Dockerfile -t rho-challenge ./
 ```
 
-> Run the image
+Run the image
 
 ```shell
 $ docker run -p 8080:8080 rho-challenge
